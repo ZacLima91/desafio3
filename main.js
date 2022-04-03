@@ -1,12 +1,63 @@
 const prompt = require("prompt-sync")();
 
 const AsciiTable = require("ascii-table");
+
+function msleep(n){
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)),0,0,n)
+}
+function sleep(n){
+  msleep(n*1000)
+}
+
 let table;
 let jogar = true;
 console.log(
   "A guerra da Ucrânia desencadeou uma terceira Guerra Mundial. A população foi dizimada graças as bombas nucleares e e armas biologicas. Poucos sobreviveram, porem não por muito tempo, com o fim da guerra e das sociedades, o mundo esta totalmente desconhecidos, com vários perigos como minas abandonadas, e criaturas mutadas por causa da radiação."
 );
 console.log("Preparado para essa aventura?");
+function irMenu() {
+  console.log("Digite qualquer tecla para voltar ao menu principal");
+  prompt();
+  console.clear();
+}
+
+//objeto para controle do tempo
+const data = {
+  dia: 0,
+  hora: 0,
+  passaTempo: function () {
+    this.hora++;
+    if (this.hora > 23) {
+      this.dia++;
+      this.hora = 0;
+    }
+  },
+};
+
+//player ganha força atraves de combates
+//player ganha agilidade atraves da exploração
+
+const player = {
+  vida: 100,
+  energia: 100,
+  forca: 1,
+  agilidade: 2,
+  sede: 0,
+  fome: 0,
+  bag: {
+    agua: 0,
+    carne: 0,
+    corda: 0,
+    madeira: 0,
+    peixe: 0,
+    mel: 0,
+    tecido: 0,
+    ervaMedicinal: 0,
+  },
+  geraAtaque: function () {
+    return (this.forca * this.agilidade) / 2;
+  },
+};
 
 //itens a ser jogados aleatoriam
 const suprimentos = [
@@ -19,7 +70,7 @@ const suprimentos = [
   "tecido",
   "ervaMedicinal",
 ];
-
+// adversários do player
 const criaturas = {
   zumbi: {
     vida: 10,
@@ -38,11 +89,33 @@ const criaturas = {
     ataque: 8,
   },
 };
-//diminuir a sede do player
+
+//bloco random 
+let listaInimigos = [];
+Object.keys(criaturas).forEach((item) => {
+  listaInimigos.push(item);
+});
+function espalharItens() {
+  return suprimentos[Math.floor(Math.random() * suprimentos.length)];
+}
+
+function espalhaInimigos() {
+  let inimigo = listaInimigos[Math.floor(Math.random() * listaInimigos.length)];
+  return inimigo;
+}
+
+function espalhar() {
+  let listaEspalhar = [espalhaInimigos(), espalharItens()];
+  return listaEspalhar[Math.floor(Math.random() * listaEspalhar.length)];
+}
+
+//metodos que alteram o status do player
 const usaveis = {
+  // altera sede e energia do player
   tomar: function () {
     let op;
     while (op != 1 && op != 2) {
+      console.clear();
       console.log("[1] ÁGUA (-5 sede)");
       console.log("[2] MEL (+5 energia");
       op = +prompt();
@@ -72,10 +145,11 @@ const usaveis = {
       }
     }
   },
-
-  //aumentar energia do player
+  //alimentar player
   comer: function () {
     let op;
+    console.clear();
+
     while (op != 1 && op != 2) {
       console.log("[1] carne ( -5 fome)");
       console.log("[2] peixe (-3 fome");
@@ -102,8 +176,9 @@ const usaveis = {
       }
     }
   },
-  //aumentar ataque do player
+  //equipar player
   equiparArmas: function () {
+    console.clear();
     let op;
     while (op != 1 && op != 2) {
       console.log("Para fazer uma lança necessita de 1 madeira");
@@ -141,6 +216,7 @@ const usaveis = {
 
   //curar o player
   curar: function () {
+    console.clear();
     if (player.bag.ervaMedicinal >= 5 && suprimentos.tecido >= 5) {
       console.log("Você fez curativos. ( +10 vida)");
       player.vida += 10;
@@ -158,49 +234,8 @@ const usaveis = {
   },
 };
 
-//player ganha força atraves de combates
-//player ganha agilidade atraves da exploração
-
-const player = {
-  vida: 100,
-  energia: 100,
-  forca: 1,
-  agilidade: 2,
-  sede: 0,
-  sono: 0,
-  fome: 0,
-  bag: {
-    agua: 0,
-    carne: 0,
-    corda: 0,
-    madeira: 0,
-    peixe: 0,
-    mel: 0,
-    tecido: 0,
-    ervaMedicinal: 0,
-  },
-  geraAtaque: function () {
-    return (this.forca * this.agilidade) / 2;
-  },
-};
-function espalharItens() {
-  return suprimentos[Math.floor(Math.random() * suprimentos.length)];
-}
-let listaInimigos = [];
-Object.keys(criaturas).forEach((item) => {
-  listaInimigos.push(item);
-});
-function espalhaInimigos() {
-  let inimigo = listaInimigos[Math.floor(Math.random() * listaInimigos.length)];
-  return inimigo;
-}
-
-function espalhar() {
-  let listaEspalhar = [espalhaInimigos(), espalharItens()];
-  return listaEspalhar[Math.floor(Math.random() * listaEspalhar.length)];
-}
-function explorar() {
-  let esc = espalhar();
+// escolha de movimento do player
+function direcaoExplorar() {
   console.log("[N] NORTE");
   console.log("[S] SUL");
   console.log("[L] LESTE");
@@ -208,97 +243,51 @@ function explorar() {
   let op = prompt().toUpperCase();
   switch (op) {
     case "N":
-      player.energia -= 2;
-      player.sono += 3;
-      player.sede += 5;
-      player.agilidade++;
-      console.log(esc);
-      if (suprimentos.includes(esc)) {
-        console.log(`Você encontrou ${esc}`);
-        player.bag[esc] += 2;
-      } else if (listaInimigos.includes(esc)) {
-        console.log(`Cuidado! Um(a) ${esc}, te tirou ${criaturas[esc].ataque} de vida.
-        `);
-        player.vida -= criaturas[esc].ataque;
-        criaturas[esc].vida -= player.ataque;
-        if (criaturas[esc].vida < 1) {
-          console.log(`Voce matou um(a) ${esc}`);
-          player.forca++;
-        } else if (player.vida < 1) {
-          console.log(`Um(a) ${esc} te matou.`);
-          gameOver();
-        }
-      }
+      explorar();
       break;
     case "S":
-      player.energia -= 2;
-      player.sono += 3;
-      player.sede += 5;
-      player.agilidade++;
-      if (suprimentos.includes(esc)) {
-        console.log(`Você encontrou ${esc}`);
-        player.bag[esc] += 3;
-      } else if (listaInimigos.includes(esc)) {
-        console.log(`Cuidado! Um(a) ${esc}, te tirou ${criaturas[esc].ataque} de vida.
-        `);
-        player.vida -= criaturas[esc].ataque;
-        criaturas[esc].vida -= player.ataque;
-        if (criaturas[esc].vida < 1) {
-          console.log(`Voce matou um(a) ${esc}`);
-          player.forca++;
-        } else if (player.vida < 1) {
-          console.log(`Um(a) ${esc} te matou.`);
-          gameOver();
-        }
-      }
+      explorar();
       break;
     case "L":
-      player.energia--;
-      player.sono += 10;
-      player.sede += 5;
-      player.agilidade++;
-      if (suprimentos.includes(esc)) {
-        console.log(`Você encontrou ${esc}`);
-        player.bag[esc] += 3;
-      } else if (listaInimigos.includes(esc)) {
-        console.log(`Cuidado! Um(a) ${esc}, te tirou ${criaturas[esc].ataque} de vida.
-        `);
-        player.vida -= criaturas[esc].ataque;
-        criaturas[esc].vida -= player.ataque;
-        if (criaturas[esc].vida < 1) {
-          console.log(`Voce matou um(a) ${esc}`);
-          player.forca++;
-        } else if (player.vida < 1) {
-          console.log(`Um(a) ${esc} te matou.`);
-          gameOver();
-        }
-      }
+      explorar();
       break;
     case "O":
-      player.energia -= 5;
-      player.sono += 10;
-      player.sede += 5;
-      player.agilidade++;
-      player.fome += 5;
-      if (suprimentos.includes(esc)) {
-        console.log(`Você encontrou ${esc}`);
-        player.bag[esc] += 3;
-      } else if (listaInimigos.includes(esc)) {
-        console.log(`Cuidado! Um(a) ${esc}, te tirou ${criaturas[esc].ataque} de vida.
-        `);
-        player.vida -= criaturas[esc].ataque;
-        criaturas[esc].vida -= player.ataque;
-        if (criaturas[esc].vida < 1) {
-          console.log(`Voce matou um(a) ${esc}`);
-          player.forca++;
-        } else if (player.vida < 1) {
-          console.log(`Um(a) ${esc} te matou.`);
-          gameOver();
-        }
-      }
+      explorar();
       break;
   }
 }
+
+// altera o status do player de acordo o seu movimento
+function explorar() {
+  let esc = espalhar();
+  player.energia -= 2;
+  player.fome += 3;
+  player.sede += 5;
+  player.agilidade++;
+  console.log(esc);
+  if (suprimentos.includes(esc)) {
+    console.log(`Você encontrou ${esc}`);
+    player.bag[esc] += 2;
+  } else if (listaInimigos.includes(esc)) {
+    console.log(`Cuidado! Um(a) ${esc}, te tirou ${criaturas[esc].ataque} de vida.
+        `);
+    player.vida -= criaturas[esc].ataque;
+    criaturas[esc].vida -= player.ataque;
+    if (criaturas[esc].vida < 1) {
+      console.log(`Voce matou um(a) ${esc}`);
+      player.forca++;
+    }else if(player.energia == 0 || player.fome== 100 || player.sede == 100){
+      player.vida -= 10
+    }else if (player.vida < 1 ) {
+      console.log(`Você morreu!);
+      gameOver();
+    }
+  }
+}
+
+
+
+// impressão do status do player
 function chamaStatus() {
   console.clear();
   table = new AsciiTable();
@@ -312,6 +301,8 @@ function chamaStatus() {
   });
   return table.toString();
 }
+
+// bag do player
 function chamaMochila() {
   console.clear();
   table = new AsciiTable();
@@ -324,55 +315,72 @@ function chamaMochila() {
   return table.toString();
 }
 
+// função principal que liga todos blocos
 function main() {
   let opcao;
   chamaStatus();
   while (jogar) {
-    console.log("[1] STATUS");
-    console.log("[2] MOCHILA");
-    console.log("[3] BEBER");
-    console.log("[4] COMER");
-    console.log("[5] CURAR");
-    console.log("[6] ARMA");
-    console.log("[7] EXPLORAR");
-    console.log("[8] SAIR DO JOGO");
-    opcao = +prompt();
-
-    switch (opcao) {
-      case 1:
-        let status = chamaStatus();
-        console.log(status);
-        break;
-      case 2:
-        console.log(chamaMochila());
-        break;
-      case 3:
-        usaveis.tomar();
-        break;
-      case 4:
-        usaveis.comer();
-        break;
-      case 5:
-        usaveis.curar();
-        break;
-      case 6:
-        usaveis.equiparArmas();
-        break;
-      case 7:
-        explorar();
-        break;
-      case 8:
-        gameOver();
-        break;
-      default:
-        console.log("Digite um valor válido");
+    data.passaTempo();
+    if (data.hora > 5 && data.hora < 18) {
+      console.log(`${data.hora} do dia ${data.dia}`);
+      console.log();
+      console.log("[1] STATUS");
+      console.log("[2] MOCHILA");
+      console.log("[3] BEBER");
+      console.log("[4] COMER");
+      console.log("[5] CURAR");
+      console.log("[6] ARMA");
+      console.log("[7] EXPLORAR");
+      console.log("[8] SAIR DO JOGO");
+      opcao = +prompt();
+      switch (opcao) {
+        case 1:
+          let status = chamaStatus();
+          console.log(status);
+          data.hora--
+          break;
+        case 2:
+          console.log(chamaMochila());
+          data.hora--
+          break;
+        case 3:
+          usaveis.tomar();
+          data.hora--
+          break;
+        case 4:
+          usaveis.comer();
+          data.hora--
+          break;
+        case 5:
+          usaveis.curar();
+          data.hora--
+          break;
+        case 6:
+          usaveis.equiparArmas();
+          data.hora--
+          break;
+        case 7:
+          direcaoExplorar();
+          data.hora++
+          break;
+        case 8:
+          gameOver();
+          continue;
+        default:
+          console.log("Digite um valor válido");
+      }
+      irMenu();
     }
-
-    console.log("Digite [ENTER] para voltar ao menu principal");
-    prompt();
-    console.clear();
+    else {
+      console.clear()
+      console.log(`${data.hora} hora(s) do dia ${data.dia}`);
+      sleep(2)
+    }
   }
 }
+
+
+// encerra ou reseta o game
 function gameOver() {
   console.log("GAME OVER!");
   let op;

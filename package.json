@@ -2,7 +2,7 @@
   "name": "desafio3",
   "version": "1.0.0",
   "description": "",
-  "main": "fun[1].js",
+  "main": "aula.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
